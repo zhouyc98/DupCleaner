@@ -37,11 +37,16 @@ class TestDupCleaner:
     def test_clean_sym(self):
         fngroups = scan_dup_files(['tests/data/data'])
         assert len(fngroups)
-        clean_dup_files(fngroups, 0)
+        try:
+            clean_dup_files(fngroups, 0)
+        except OSError as e:
+            print(e)
+            assert os.name == 'nt' and 'No symlink permission' in str(e)
+            return
         for n in ('10', '20', '30'):
             fns = glob.glob(f'tests/data/data/**/{n}-*.txt', recursive=True)
             assert len(fns) == 4 and len([f for f in fns if os.path.islink(f)]) == 3
-            for f in fns[1:]: assert os.path.samefile(f, fns[0])
+            assert all(os.path.samefile(f, fns[0]) for f in fns[1:])
 
     def teardown_method(self):
         shutil.rmtree('tests/data/data', True)

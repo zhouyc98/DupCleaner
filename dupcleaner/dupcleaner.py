@@ -72,11 +72,17 @@ def scan_dup_files(dirpaths: list, ignore_size=10240):
 
 
 def clean_dup_files(fngroups: list[tuple], use_hard_link=1):
+    if os.name == 'nt' and not use_hard_link:  # check in Windows
+        try:
+            os.symlink('.', 'symlink-test')
+            os.remove('symlink-test')
+        except OSError:
+            raise OSError('No symlink permission. Please run as Admin') from None
     _link = os.link if use_hard_link else os.symlink
     for size, fns in fngroups:  # fns has been sorted by mtime
         fn_origin = os.path.abspath(fns[0])
         for fn in fns[1:]:
-            os.remove(fn)
+            os.path.exists(fn) and os.remove(fn)  # missing ok
             _link(fn_origin, fn)
             print('linked', fn, '=' if use_hard_link else '->', fn_origin)
 
